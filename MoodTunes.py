@@ -3,13 +3,25 @@ from deepface import DeepFace
 import re
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
-import time  # Importing time for delay
+import time  
+
+import os
+from dotenv import load_dotenv
+
+env_path = './keys.env'
+load_dotenv(dotenv_path=env_path)
+
+# Access the keys from the environment
+CLIENT_ID = os.getenv('CLIENT_ID')
+CLIENT_SECRET = os.getenv('CLIENT_SECRET')
 
 # Spotify API setup
-CLIENT_ID = 1
-CLIENT_SECRET = 1
-client_credentials_manager = SpotifyClientCredentials(client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
+client_credentials_manager = SpotifyClientCredentials(
+    client_id=CLIENT_ID,
+    client_secret=CLIENT_SECRET
+)
 sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
+
 
 # Emotion categories dictionary
 emotion_tracks = {
