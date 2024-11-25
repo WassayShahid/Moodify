@@ -6,8 +6,8 @@ from spotipy.oauth2 import SpotifyClientCredentials
 import time  # Importing time for delay
 
 # Spotify API setup
-CLIENT_ID = 'a7e697ef637948f1a52d270b911a436b'
-CLIENT_SECRET = 'c911d67291f246c2a417b7444eac0c28'
+CLIENT_ID = 1
+CLIENT_SECRET = 1
 client_credentials_manager = SpotifyClientCredentials(client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
 sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
