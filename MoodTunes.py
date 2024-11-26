@@ -3,9 +3,9 @@ from deepface import DeepFace
 import re
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
-import time  
-
+import time
 import os
+import random  
 from dotenv import load_dotenv
 
 env_path = './keys.env'
@@ -22,14 +22,15 @@ client_credentials_manager = SpotifyClientCredentials(
 )
 sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
-
 # Emotion categories dictionary
 emotion_tracks = {
-    "Happiness": [],
-    "Sadness": [],
-    "Anger": [],
-    "Calmness": [],
-    "Neutral": []
+    "happy": [],
+    "sad": [],
+    "angry": [],
+    "neutral": [],
+    "fear": [],
+    "surprised": [],
+    "disgust": []
 }
 
 # Function to extract playlist ID
@@ -52,7 +53,7 @@ def get_tracks_from_playlist(playlist_id):
 # Function to get audio features for tracks
 def get_audio_features_for_tracks(track_ids):
     features = []
-    for i in range(0, len(track_ids), 100): 
+    for i in range(0, len(track_ids), 100):  
         features.extend(sp.audio_features(track_ids[i:i + 100]))
     return features
 
@@ -60,16 +61,25 @@ def get_audio_features_for_tracks(track_ids):
 def calculate_emotion(features):
     valence = features['valence']
     energy = features['energy']
+    danceability = features['danceability']
+    acousticness = features['acousticness']
+    tempo = features['tempo']
+    mode = features['mode']
+
     if valence > 0.75 and energy > 0.6:
-        return "Happiness"
+        return "happy"
     elif valence < 0.4 and energy < 0.4:
-        return "Sadness"
+        return "sad"
     elif energy > 0.8 and valence < 0.5:
-        return "Anger"
-    elif energy < 0.5 and valence > 0.5:
-        return "Calmness"
+        return "angry"
+    elif valence < 0.3 and acousticness > 0.5 and mode == 0:
+        return "fear"
+    elif energy > 0.7 and tempo > 120:
+        return "surprised"
+    elif valence < 0.4 and danceability < 0.4:
+        return "disgust"
     else:
-        return "Neutral"
+        return "neutral"
 
 # Adding tracks to emotion dictionary
 def add_tracks_to_emotion_dict(playlist_url):
@@ -80,7 +90,7 @@ def add_tracks_to_emotion_dict(playlist_url):
         audio_features = get_audio_features_for_tracks(track_ids)
         
         for feature, track in zip(audio_features, tracks):
-            if feature:  
+            if feature: 
                 emotion = calculate_emotion(feature)
                 track_name = track['track']['name']
                 artist_name = track['track']['artists'][0]['name']
@@ -96,24 +106,10 @@ def add_tracks_to_emotion_dict(playlist_url):
 playlist_url = input("Enter your Spotify playlist URL: ")
 add_tracks_to_emotion_dict(playlist_url)
 
-
-# Normalize emotion names to lowercase
-def normalize_emotion(emotion):
-    emotion_mapping = {
-        "happy": "Happiness",
-        "sad": "Sadness",
-        "angry": "Anger",
-        "neutral": "Neutral",
-        "fear": "Neutral",  
-        "disgust": "Neutral",  
-        "surprise": "Happiness"  
-    }
-    return emotion_mapping.get(emotion.lower(), "Neutral")  
-
 # Webcam setup
 cap = cv2.VideoCapture(0)
 last_emotion = None
-last_emotion_time = 0  # Store the time the last emotion was detected
+last_emotion_time = 0 
 
 while True:
     ret, frame = cap.read()
@@ -124,27 +120,25 @@ while True:
     try:
         # Detect emotion using DeepFace
         results = DeepFace.analyze(frame, actions=['emotion'], enforce_detection=False)
-        detected_emotion = results[0]['dominant_emotion'] if isinstance(results, list) else results['dominant_emotion']
-        
-        # Normalize detected emotion
-        normalized_emotion = normalize_emotion(detected_emotion)
+        emotion = results[0]['dominant_emotion'] if isinstance(results, list) else results['dominant_emotion']
 
         # Display emotion on the frame
-        cv2.putText(frame, f'Emotion: {normalized_emotion}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+        cv2.putText(frame, f'Emotion: {emotion}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)
 
         # Check if emotion has changed or if enough time has passed
         current_time = time.time()
-        if normalized_emotion != last_emotion or (current_time - last_emotion_time >= 30):
-            last_emotion = normalized_emotion
+        if emotion != last_emotion or (current_time - last_emotion_time >= 30):
+            last_emotion = emotion
             last_emotion_time = current_time
 
-            # Suggest songs after 5 seconds of detecting the same emotion
-            if normalized_emotion in emotion_tracks and emotion_tracks[normalized_emotion]:
-                print(f"Suggested songs for {normalized_emotion}:")
-                for track in emotion_tracks[normalized_emotion][:5]:  # Show top 5 suggestions
+            # Suggest random 5 songs for the detected emotion
+            if emotion in emotion_tracks and emotion_tracks[emotion]:
+                random_tracks = random.sample(emotion_tracks[emotion], min(5, len(emotion_tracks[emotion])))
+                print(f"Suggested songs for {emotion}:")
+                for track in random_tracks:
                     print(track)
             else:
-                print(f"No tracks available for the detected emotion: {normalized_emotion}")
+                print(f"No tracks available for the detected emotion: {emotion}")
 
     except Exception as e:
         print("Error analyzing frame:", e)
@@ -158,4 +152,3 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
-
