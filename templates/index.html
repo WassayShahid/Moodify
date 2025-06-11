@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MoodTunes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f2f2f2;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 80px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        input[type="text"] {
+            width: 80%;
+            padding: 10px;
+            margin: 15px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            padding: 5px 0;
+        }
+
+        a {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: #2196F3;
+            font-weight: bold;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .message {
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MoodTunes 🎵</h1>
+        <p>Emotion-Based Music Recommendation</p>
+
+        <!-- Playlist Submission Form -->
+        <form method="post">
+            <input type="text" id="playlist" name="playlist" placeholder="Enter Spotify Playlist URL" required>
+            <br>
+            <button type="submit">Load Playlist</button>
+        </form>
+
+        <!-- Show success message if playlist is loaded -->
+        {% if success %}
+            <p class="message">✅ Playlist loaded successfully!</p>
+            <a href="/recommend">Click here to get music recommendations based on your current emotion</a>
+        {% endif %}
+
+        <!-- Display emotion and recommended tracks -->
+        {% if emotion %}
+            <h2>Detected Emotion: {{ emotion }}</h2>
+            {% if recommendations %}
+                <h3>Recommended Tracks:</h3>
+                <ul>
+                    {% for track in recommendations %}
+                        <li>{{ track }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No tracks available for this emotion.</p>
+            {% endif %}
+        {% endif %}
+    </div>
+</body>
+</html>
