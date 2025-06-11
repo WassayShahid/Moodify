@@ -4,41 +4,25 @@ import re
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import os
-import time
 import random
 from dotenv import load_dotenv
 
-# Load credentials
-load_dotenv(dotenv_path='./keys.env')
-
+# Load environment variables
+load_dotenv('./keys.env')
 CLIENT_ID = os.getenv('CLIENT_ID')
 CLIENT_SECRET = os.getenv('CLIENT_SECRET')
 
-if not CLIENT_ID or not CLIENT_SECRET:
-    raise Exception("Spotify CLIENT_ID or CLIENT_SECRET not found in keys.env")
+sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(
+    client_id=CLIENT_ID,
+    client_secret=CLIENT_SECRET
+))
 
-# Emotion categories
-emotion_tracks = {
-    "happy": [],
-    "sad": [],
-    "angry": [],
-    "neutral": [],
-    "fear": [],
-    "surprised": [],
-    "disgust": []
-}
-
-def load_spotify():
-    credentials = SpotifyClientCredentials(client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
-    return spotipy.Spotify(client_credentials_manager=credentials)
-
-sp = load_spotify()
+# Spotify & Emotion Setup
+emotion_tracks = { "happy": [], "sad": [], "angry": [], "neutral": [], "fear": [], "surprised": [], "disgust": [] }
 
 def extract_playlist_id(playlist_url):
     match = re.search(r'playlist/([\w\d]+)', playlist_url)
-    if match:
-        return match.group(1)
-    raise ValueError("Invalid playlist URL format.")
+    return match.group(1) if match else None
 
 def get_tracks_from_playlist(playlist_id):
     tracks = []
@@ -48,7 +32,7 @@ def get_tracks_from_playlist(playlist_id):
         results = sp.next(results) if results['next'] else None
     return tracks
 
-def get_audio_features_for_tracks(track_ids):
+def get_audio_features(track_ids):
     features = []
     for i in range(0, len(track_ids), 100):
         features.extend(sp.audio_features(track_ids[i:i + 100]))
@@ -61,7 +45,6 @@ def calculate_emotion(features):
     acousticness = features['acousticness']
     tempo = features['tempo']
     mode = features['mode']
-
     if valence > 0.75 and energy > 0.6:
         return "happy"
     elif valence < 0.4 and energy < 0.4:
@@ -78,38 +61,41 @@ def calculate_emotion(features):
         return "neutral"
 
 def process_playlist(playlist_url):
-    global emotion_tracks
-    emotion_tracks = {key: [] for key in emotion_tracks}  # reset
-    playlist_id = extract_playlist_id(playlist_url)
-    tracks = get_tracks_from_playlist(playlist_id)
-    track_ids = [track['track']['id'] for track in tracks if track['track']]
-    audio_features = get_audio_features_for_tracks(track_ids)
-
-    for feature, track in zip(audio_features, tracks):
-        if feature:
-            emotion = calculate_emotion(feature)
-            name = track['track']['name']
-            artist = track['track']['artists'][0]['name']
-            emotion_tracks[emotion].append(f"{name} by {artist}")
-    return emotion_tracks
+    local_tracks = {key: [] for key in emotion_tracks}
+    try:
+        playlist_id = extract_playlist_id(playlist_url)
+        if not playlist_id:
+            raise ValueError("Invalid playlist URL.")
+        tracks = get_tracks_from_playlist(playlist_id)
+        track_ids = [track['track']['id'] for track in tracks if track['track']]
+        audio_features = get_audio_features(track_ids)
+        for feature, track in zip(audio_features, tracks):
+            if feature:
+                emotion = calculate_emotion(feature)
+                track_name = track['track']['name']
+                artist_name = track['track']['artists'][0]['name']
+                local_tracks[emotion].append(f"{track_name} by {artist_name}")
+    except Exception as e:
+        print("Error:", e)
+    return local_tracks
 
 def capture_frame():
     cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        raise RuntimeError("Webcam not accessible")
     ret, frame = cap.read()
     cap.release()
     if not ret:
-        raise Exception("Failed to capture frame from webcam.")
+        raise RuntimeError("Failed to capture frame from webcam")
     return frame
 
 def analyze_frame(frame):
     try:
-        results = DeepFace.analyze(frame, actions=['emotion'], enforce_detection=False)
-        return results[0]['dominant_emotion'] if isinstance(results, list) else results['dominant_emotion']
+        result = DeepFace.analyze(frame, actions=['emotion'], enforce_detection=False)
+        return result[0]['dominant_emotion'] if isinstance(result, list) else result['dominant_emotion']
     except Exception as e:
-        raise Exception(f"Emotion detection error: {e}")
+        print("Emotion analysis failed:", e)
+        return "neutral"
 
-def recommend_tracks(emotion, emotion_tracks):
-    if emotion in emotion_tracks and emotion_tracks[emotion]:
-        return random.sample(emotion_tracks[emotion], min(5, len(emotion_tracks[emotion])))
-    else:
-        return [f"No tracks found for emotion: {emotion}"]
+def recommend_tracks(emotion, track_dict):
+    return random.sample(track_dict.get(emotion, []), min(5, len(track_dict.get(emotion, []))))
