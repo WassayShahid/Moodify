@@ -1,101 +1,120 @@
 import cv2
-from deepface import DeepFace
+import os
 import re
+import json
+import time
+import random
+import requests
+from dotenv import load_dotenv
+from deepface import DeepFace
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
-import os
-import random
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv('./keys.env')
+
+load_dotenv(dotenv_path="./keys.env")
+
 CLIENT_ID = os.getenv('CLIENT_ID')
 CLIENT_SECRET = os.getenv('CLIENT_SECRET')
+LASTFM_API_KEY = os.getenv("LASTFM_API_KEY")
+sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=CLIENT_ID, client_secret=CLIENT_SECRET))
 
-sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(
-    client_id=CLIENT_ID,
-    client_secret=CLIENT_SECRET
-))
+emotion_tracks = {
+    "happy": [], "sad": [], "angry": [],
+    "energetic": [], "calm": [], "neutral": []
+}
 
-# Spotify & Emotion Setup
-emotion_tracks = { "happy": [], "sad": [], "angry": [], "neutral": [], "fear": [], "surprised": [], "disgust": [] }
+deepface_to_app_emotion_map = {
+    "happy": "happy", "sad": "sad", "angry": "angry", "neutral": "neutral",
+    "fear": "angry", "surprise": "energetic", "disgust": "angry"
+}
 
-def extract_playlist_id(playlist_url):
-    match = re.search(r'playlist/([\w\d]+)', playlist_url)
-    return match.group(1) if match else None
-
-def get_tracks_from_playlist(playlist_id):
-    tracks = []
-    results = sp.playlist_items(playlist_id)
-    while results:
-        tracks.extend(results['items'])
-        results = sp.next(results) if results['next'] else None
-    return tracks
-
-def get_audio_features(track_ids):
-    features = []
-    for i in range(0, len(track_ids), 100):
-        features.extend(sp.audio_features(track_ids[i:i + 100]))
-    return features
-
-def calculate_emotion(features):
-    valence = features['valence']
-    energy = features['energy']
-    danceability = features['danceability']
-    acousticness = features['acousticness']
-    tempo = features['tempo']
-    mode = features['mode']
-    if valence > 0.75 and energy > 0.6:
-        return "happy"
-    elif valence < 0.4 and energy < 0.4:
-        return "sad"
-    elif energy > 0.8 and valence < 0.5:
-        return "angry"
-    elif valence < 0.3 and acousticness > 0.5 and mode == 0:
-        return "fear"
-    elif energy > 0.7 and tempo > 120:
-        return "surprised"
-    elif valence < 0.4 and danceability < 0.4:
-        return "disgust"
-    else:
-        return "neutral"
-
-def process_playlist(playlist_url):
-    local_tracks = {key: [] for key in emotion_tracks}
-    try:
-        playlist_id = extract_playlist_id(playlist_url)
-        if not playlist_id:
-            raise ValueError("Invalid playlist URL.")
-        tracks = get_tracks_from_playlist(playlist_id)
-        track_ids = [track['track']['id'] for track in tracks if track['track']]
-        audio_features = get_audio_features(track_ids)
-        for feature, track in zip(audio_features, tracks):
-            if feature:
-                emotion = calculate_emotion(feature)
-                track_name = track['track']['name']
-                artist_name = track['track']['artists'][0]['name']
-                local_tracks[emotion].append(f"{track_name} by {artist_name}")
-    except Exception as e:
-        print("Error:", e)
-    return local_tracks
 
 def capture_frame():
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        raise RuntimeError("Webcam not accessible")
+        raise RuntimeError("Unable to open webcam.")
     ret, frame = cap.read()
     cap.release()
     if not ret:
-        raise RuntimeError("Failed to capture frame from webcam")
+        raise RuntimeError("Failed to capture frame.")
     return frame
 
 def analyze_frame(frame):
     try:
-        result = DeepFace.analyze(frame, actions=['emotion'], enforce_detection=False)
-        return result[0]['dominant_emotion'] if isinstance(result, list) else result['dominant_emotion']
+        results = DeepFace.analyze(frame, actions=['emotion'], enforce_detection=False, silent=True)
+        if isinstance(results, list) and results:
+            detected = results[0]['dominant_emotion'].lower()
+        else:
+            detected = "neutral"
+        return deepface_to_app_emotion_map.get(detected, "neutral")
     except Exception as e:
-        print("Emotion analysis failed:", e)
+        print(f"Emotion analysis error: {e}")
         return "neutral"
 
-def recommend_tracks(emotion, track_dict):
-    return random.sample(track_dict.get(emotion, []), min(5, len(track_dict.get(emotion, []))))
+
+def extract_playlist_id(url):
+    match = re.search(r'playlist/([\w\d]+)', url)
+    if match:
+        return match.group(1)
+    raise ValueError("Invalid Spotify playlist URL.")
+
+def get_tracks_from_playlist_spotify(playlist_id):
+    tracks = []
+    results = sp.playlist_items(playlist_id, fields="items(track(id,name,artists(name))),next")
+    while results:
+        for item in results['items']:
+            t = item.get('track')
+            if t:
+                tracks.append({"spotify_id": t['id'], "name": t['name'], "artist": t['artists'][0]['name']})
+        results = sp.next(results) if results['next'] else None
+        time.sleep(0.1)
+    return tracks
+
+
+def get_lastfm_tags(track_name, artist_name):
+    url = f"http://ws.audioscrobbler.com/2.0/"
+    params = {
+        "method": "track.gettoptags",
+        "artist": artist_name,
+        "track": track_name,
+        "api_key": LASTFM_API_KEY,
+        "format": "json"
+    }
+    try:
+        r = requests.get(url, params=params, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        tags = [tag['name'].lower() for tag in data.get('toptags', {}).get('tag', [])]
+        return tags
+    except Exception as e:
+        print(f"Failed to fetch Last.fm tags for {track_name} by {artist_name}: {e}")
+        return []
+
+def classify_emotion_from_tags(tags):
+    tag_map = {
+        "happy": ["happy", "fun", "upbeat", "joy", "sunshine", "cheerful", "feel good"],
+        "sad": ["sad", "melancholy", "depressing", "heartbreak", "emotional", "lonely"],
+        "angry": ["angry", "aggressive", "rage", "dark", "metalcore", "hardcore"],
+        "energetic": ["energetic", "party", "dance", "fast", "hype", "electronic"],
+        "calm": ["calm", "chill", "relaxing", "ambient", "soft", "soothing"]
+    }
+    tag_set = set(tags)
+    scores = {emotion: len(tag_set & set(match_tags)) for emotion, match_tags in tag_map.items()}
+    max_emotion = max(scores.items(), key=lambda x: x[1], default=("neutral", 0))
+    return max_emotion[0] if max_emotion[1] > 0 else "neutral"
+
+
+def process_playlist(playlist_url):
+    global emotion_tracks
+    emotion_tracks = {k: [] for k in emotion_tracks}
+    playlist_id = extract_playlist_id(playlist_url)
+    tracks = get_tracks_from_playlist_spotify(playlist_id)
+    for t in tracks:
+        tags = get_lastfm_tags(t['name'], t['artist'])
+        emotion = classify_emotion_from_tags(tags)
+        emotion_tracks[emotion].append(f"{t['name']} by {t['artist']}")
+        print(f"{t['name']} by {t['artist']} → {emotion}")
+    return emotion_tracks
+
+def recommend_tracks(emotion, emotion_tracks_dict):
+    return random.sample(emotion_tracks_dict.get(emotion, []), min(3, len(emotion_tracks_dict.get(emotion, []))))

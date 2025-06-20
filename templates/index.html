@@ -37,6 +37,7 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 16px;
+            margin: 5px;
         }
 
         button:hover {
@@ -72,6 +73,36 @@
             color: green;
             font-weight: bold;
         }
+
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+
+        #spinner {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4CAF50;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        iframe {
+            margin-top: 30px;
+            border-radius: 12px;
+        }
     </style>
 </head>
 <body>
@@ -80,19 +111,33 @@
         <p>Emotion-Based Music Recommendation</p>
 
         <!-- Playlist Submission Form -->
-        <form method="post">
+        <form method="post" action="/">
             <input type="text" id="playlist" name="playlist" placeholder="Enter Spotify Playlist URL" required>
             <br>
             <button type="submit">Load Playlist</button>
         </form>
 
-        <!-- Show success message if playlist is loaded -->
+        <!-- Capture Emotion Button -->
+        <form id="capture-form" method="post" action="/recommend">
+            <button type="submit" id="capture-btn">📸 Capture Emotion</button>
+        </form>
+
+        <!-- Spinner -->
+        <div id="spinner">
+            <div class="loader"></div>
+            <p>Detecting emotion and finding music...</p>
+        </div>
+
+        <!-- Playlist success message -->
         {% if success %}
             <p class="message">✅ Playlist loaded successfully!</p>
-            <a href="/recommend">Click here to get music recommendations based on your current emotion</a>
         {% endif %}
 
-        <!-- Display emotion and recommended tracks -->
+        {% if error %}
+            <p class="error">⚠️ {{ error }}</p>
+        {% endif %}
+
+        <!-- Emotion & Recommendations -->
         {% if emotion %}
             <h2>Detected Emotion: {{ emotion }}</h2>
             {% if recommendations %}
@@ -102,10 +147,31 @@
                         <li>{{ track }}</li>
                     {% endfor %}
                 </ul>
+
+                <!-- Save to Spotify -->
+                <form method="get" action="/save_playlist">
+                    <button type="submit">💾 Save Playlist to Spotify</button>
+                </form>
             {% else %}
                 <p>No tracks available for this emotion.</p>
             {% endif %}
         {% endif %}
+        
+        <!-- Spotify Embed for the loaded playlist -->
+        {% if playlist_id %}
+            <iframe src="https://open.spotify.com/embed/playlist/{{ playlist_id }}"
+                    width="100%" height="400" frameborder="0"
+                    allowtransparency="true" allow="encrypted-media"></iframe>
+        {% endif %}
     </div>
+
+
+    <script>
+        const form = document.getElementById('capture-form');
+        const spinner = document.getElementById('spinner');
+        form.addEventListener('submit', function() {
+            spinner.style.display = 'block';
+        });
+    </script>
 </body>
 </html>
