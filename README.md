@@ -40,5 +40,4 @@ moodify/demo_playlist.json
 templates/              base, landing, app pages
 static/js/app.js        camera, face-api detection, picks, chart, save flow
 static/css/style.css
-legacy/                 the original command-line and DeepFace versions
 ```
