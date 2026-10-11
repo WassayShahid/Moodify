@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Moodify · Music that matches your mood{% endblock %}
+{% block content %}
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow">Mood-aware music</span>
+      <h1>Your face picks<br><span class="grad">the next song.</span></h1>
+      <p class="lead">Moodify reads your expression through your webcam, sorts your Spotify playlist by mood, and plays the tracks that fit how you feel right now.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-primary" href="{{ url_for('main_app') }}">Try Moodify →</a>
+        <a class="btn btn-ghost" href="#how">How it works</a>
+      </div>
+    </div>
+    <div class="orb-stage" aria-hidden="true">
+      <div class="orb"></div>
+      <div class="orb-face"><div><div class="emoji" id="orb-emoji">😊</div><div class="label" id="orb-label">Feeling happy</div></div></div>
+    </div>
+  </div>
+</header>
+
+<section class="block" id="how">
+  <div class="wrap">
+    <h2>How it works</h2>
+    <p class="sub">Three steps and about ten seconds of setup.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <h3>Drop in a playlist</h3>
+        <p>Paste any public Spotify playlist, or use the demo mix. Moodify looks up each song's Last.fm tags and sorts it into a mood.</p>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <h3>Turn on your camera</h3>
+        <p>A small face-expression model runs right in your browser and reads your mood every second.</p>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <h3>Press play</h3>
+        <p>Matching songs show up as Spotify players. When your mood changes, the picks change too. Save any set to your Spotify account.</p>
+      </div>
+    </div>
+    <div class="mood-strip">
+      <span class="mood-pill"><i style="background:var(--mood-happy)"></i>Happy</span>
+      <span class="mood-pill"><i style="background:var(--mood-energetic)"></i>Energetic</span>
+      <span class="mood-pill"><i style="background:var(--mood-calm)"></i>Calm</span>
+      <span class="mood-pill"><i style="background:var(--mood-neutral)"></i>Neutral</span>
+      <span class="mood-pill"><i style="background:var(--mood-sad)"></i>Sad</span>
+      <span class="mood-pill"><i style="background:var(--mood-angry)"></i>Angry</span>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <h2>Built with privacy in mind</h2>
+    <p class="sub">Your face is the input, so it should stay yours.</p>
+    <div class="features">
+      <div class="feature">
+        <div class="icon">🔒</div>
+        <h3>Camera never leaves your device</h3>
+        <p>Mood detection runs fully in your browser with face-api.js. No image or video is ever uploaded.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">🎚️</div>
+        <h3>Live, but steady</h3>
+        <p>Readings are smoothed over a few seconds, so a single blink or grin won't swap your whole queue.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">📊</div>
+        <h3>See your playlist's mood</h3>
+        <p>A breakdown chart shows how your playlist splits across moods. Click any mood to jump to its songs.</p>
+      </div>
+      <div class="feature">
+        <div class="icon">💾</div>
+        <h3>Save to Spotify</h3>
+        <p>Like what you're hearing? Save the current picks as a private playlist in one click.</p>
+      </div>
+    </div>
+    <div class="cta-band">
+      <h2>Ready to hear your mood?</h2>
+      <p class="sub" style="margin:0 auto 24px">No sign-up needed to try it.</p>
+      <a class="btn btn-primary" href="{{ url_for('main_app') }}">Open Moodify →</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const moods = [["😊", "Feeling happy"], ["⚡", "Feeling energetic"], ["🌊", "Feeling calm"], ["🌧️", "Feeling sad"], ["🔥", "Feeling fired up"]];
+  let i = 0;
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    setInterval(() => {
+      i = (i + 1) % moods.length;
+      document.getElementById("orb-emoji").textContent = moods[i][0];
+      document.getElementById("orb-label").textContent = moods[i][1];
+    }, 2200);
+  }
+</script>
+{% endblock %}

@@ -103,7 +103,7 @@ def classify_emotion_from_tags(tags):
     max_emotion = max(scores.items(), key=lambda x: x[1], default=("neutral", 0))
     return max_emotion[0] if max_emotion[1] > 0 else "neutral"
 
-
+# --- Playlist Processing ---
 def process_playlist(playlist_url):
     global emotion_tracks
     emotion_tracks = {k: [] for k in emotion_tracks}
