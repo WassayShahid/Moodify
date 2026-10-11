@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Moodify{% endblock %}</title>
+  <meta name="description" content="Moodify reads the mood on your face and plays the songs from your Spotify playlist that match it.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎧</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <nav class="nav">
+    <div class="wrap">
+      <a class="brand" href="{{ url_for('landing') }}"><span class="brand-mark"></span>Moodify</a>
+      <div class="nav-links">
+        <a class="hide-sm" href="{{ url_for('landing') }}#how">How it works</a>
+        <a class="hide-sm" href="https://github.com/WassayShahid/Moodify" target="_blank" rel="noopener">GitHub</a>
+        {% block nav_cta %}<a class="btn btn-primary" href="{{ url_for('main_app') }}">Open app</a>{% endblock %}
+      </div>
+    </div>
+  </nav>
+  {% block content %}{% endblock %}
+  <footer>
+    <div class="wrap">
+      <span>Moodify · built by Wassay Shahid</span>
+      <span>Mood tags from Last.fm · music from Spotify</span>
+    </div>
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

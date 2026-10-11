@@ -1,1 +1,17 @@
-keys.env
+# secrets
+.env
+*.env
+!.env.example
+.cache
+.cache-*
+
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# runtime data (Last.fm tag cache)
+instance/
+
+# local tooling
+.claude/

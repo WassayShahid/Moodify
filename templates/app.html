@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Moodify · App{% endblock %}
+{% block nav_cta %}{% endblock %}
+{% block content %}
+<main class="wrap app-grid">
+  <div>
+    <section class="panel">
+      <h2>1 · Your playlist</h2>
+      <p class="hint">Paste a public Spotify playlist link.</p>
+      <form class="field" id="playlist-form">
+        <input id="playlist-url" type="url" placeholder="https://open.spotify.com/playlist/…" required aria-label="Spotify playlist URL">
+        <button class="btn btn-primary" id="load-btn" type="submit">Load</button>
+      </form>
+      <div class="or">or</div>
+      <button class="btn btn-ghost" id="demo-btn" type="button" style="width:100%">🎲 Try the demo playlist</button>
+      <div class="playlist-head hidden" id="playlist-head">
+        <img id="pl-img" alt="" class="hidden"><div class="ph" id="pl-ph">🎵</div>
+        <div><div class="name" id="pl-name"></div><div class="meta" id="pl-meta"></div></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>2 · Your mood</h2>
+      <p class="hint">Live detection reads your expression every second.</p>
+      <div class="cam" id="cam">
+        <video id="video" autoplay muted playsinline></video>
+        <div class="placeholder" id="cam-placeholder">📷<br>Camera is off</div>
+        <span class="live-badge">LIVE</span>
+      </div>
+      <div class="cam-controls">
+        <button class="btn btn-primary btn-sm" id="cam-btn" type="button">Start camera</button>
+      </div>
+      <p class="privacy">🔒 Runs fully in your browser. Your camera feed is never uploaded.</p>
+    </section>
+  </div>
+
+  <div>
+    <section class="panel">
+      <div class="mood-now" id="mood-now">
+        <div class="emoji" id="mood-emoji">🎧</div>
+        <div>
+          <div class="label" id="mood-label">No mood yet</div>
+          <div class="sub" id="mood-sub">Start the camera or click a mood below</div>
+        </div>
+        <div class="conf" id="mood-conf"></div>
+      </div>
+      <h2>Playlist mood breakdown</h2>
+      <p class="hint">Click a mood to pick it yourself.</p>
+      <div class="chart" id="chart" role="list">
+        {% for m in moods %}
+        <button class="bar-row" data-mood="{{ m }}" role="listitem" type="button">
+          <span>{{ mood_labels[m] }}</span>
+          <span class="track"><span class="fill" style="width:0%"></span></span>
+          <span class="n">0</span>
+        </button>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="recs-head">
+        <h2 id="recs-title">Recommended for you</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" id="shuffle-btn" type="button" disabled>🔀 Shuffle</button>
+          <button class="btn btn-primary btn-sm" id="save-btn" type="button" disabled>💾 Save to Spotify</button>
+        </div>
+      </div>
+      <div class="recs" id="recs"><div class="empty">Load a playlist and share your mood to get picks.</div></div>
+    </section>
+  </div>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>window.MOOD_LABELS = {{ mood_labels | tojson }};</script>
+<script type="module" src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% endblock %}
